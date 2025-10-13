@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { fetchAllQuests } from '@/lib/tarkovApi';
 import { getQuestState, completeQuest, uncompleteQuest, subscribeToQuestState, migrateOldData } from '@/lib/questState';
 import { Search, ExternalLink } from 'lucide-react';
+import { UndoButton } from "@/components/UndoButton";
 
 interface Quest {
   id: string;
@@ -33,6 +34,24 @@ const TRADER_IMAGES: Record<string, string> = {
   'Lightkeeper': 'https://assets.tarkov.dev/lightkeeper-icon.jpg',
   'Unknown': ''
 };
+export default function QuestPage() {
+  return (
+    <div className="flex items-center justify-between px-4 py-2 bg-[#0e0f13]">
+      <div className="flex items-center space-x-2">
+        <span className="text-sm text-muted-foreground">knivet_</span>
+        <button className="bg-black text-white text-xs px-2 py-1 rounded-md">Logg ut</button>
+      </div>
+
+      <div className="flex items-center space-x-2">
+        {/* Ny undo-knapp */}
+        <UndoButton scope="quest" />
+        <button className="bg-[#1f2233] text-white text-sm px-3 py-1 rounded-md">
+          ← Back to Quest Path
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const TRADER_ORDER = ['Prapor', 'Therapist', 'Skier', 'Peacekeeper', 'Mechanic', 'Ragman', 'Jaeger', 'Fence', 'Lightkeeper'];
 
