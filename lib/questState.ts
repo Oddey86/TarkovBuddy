@@ -226,6 +226,50 @@ export function getAllHideoutItems(): HideoutItemsMap {
 }
 
 // ============================================================================
+// Quest Items - tracking av items som trengs for quests
+// ============================================================================
+const QUEST_ITEMS_KEY = "tt_quest_items_v1"; // itemId -> count
+
+type QuestItemsMap = Record<string, number>; // itemId -> count
+
+function getQuestItems(): QuestItemsMap {
+  return loadJSON<QuestItemsMap>(QUEST_ITEMS_KEY, {});
+}
+
+async function setQuestItems(map: QuestItemsMap) {
+  await saveJSON(QUEST_ITEMS_KEY, map);
+  notify();
+}
+
+/**
+ * Oppdater antall av et quest item
+ */
+export async function updateQuestItemCount(itemId: string, count: number) {
+  const items = { ...getQuestItems() };
+  if (count <= 0) {
+    delete items[itemId];
+  } else {
+    items[itemId] = count;
+  }
+  await setQuestItems(items);
+}
+
+/**
+ * Hent antall av et quest item
+ */
+export function getQuestItemCount(itemId: string): number {
+  const items = getQuestItems();
+  return items[itemId] || 0;
+}
+
+/**
+ * Hent alle quest items
+ */
+export function getAllQuestItems(): QuestItemsMap {
+  return getQuestItems();
+}
+
+// ============================================================================
 // Migrering (hold tom inntil du trenger å mappe gamle nøkler til nye)
 // ============================================================================
 export function migrateOldData() {
