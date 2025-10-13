@@ -1,21 +1,30 @@
 // lib/questState.ts
 "use client";
 
-import { storage } from "@/lib/storage";
+import { storage, loadProgress, saveProgress } from "@/lib/storage";
 
 // === Legacy-lik nøkkelbruk ===
 const TASKS_KEY       = "tt_kappa_tasks_v3";     // questId -> boolean
 const UNDO_KEY        = "tt_kappa_undo_v3";      // stack av QuestCompletionMap snapshots
-const OBJECTIVES_KEY  = "tt_kappa_objectives_v1"; // objectiveId -> boolean (for optimizer)
+const HIDEOUT_KEY     = "tt_hideout_levels_v1";  // level -> selected (for "select all" per level)
 
+// Merk: objectives + playerLevel hentes fra loadProgress()/saveProgress()
+// lagret i key 'tarkov-progress' i storage.ts
+
+// ---------- typer ----------
 export type QuestCompletionMap = Record<string, boolean>;
 export type ObjectiveMap = Record<string, boolean>;
 
-type Subscriber = (state: {
+type QuestStateForUI = {
   completedQuests: string[];
   map: QuestCompletionMap;
-}) => void;
+  completedObjectives: string[]; // lagt til for optimizer
+  playerLevel?: number;          // lagt til for optimizer
+};
 
+type Subscriber = (state: QuestStateForUI) => void;
+
+// ---------- subscribers ----------
 let subscribers: Subscriber[] = [];
 
 function notify() {
@@ -25,20 +34,14 @@ function notify() {
 
 export function subscribeToQuestState(cb: Subscriber): () => void {
   subscribers.push(cb);
-  // Viktig: CLEANUP skal ikke returnere array, den skal bare gjøre sideeffekt og returnere void
   return () => {
     subscribers = subscribers.filter((x) => x !== cb);
   };
 }
 
-
 // ---------- JSON helpers ----------
 function parseJSON<T>(s: string | null, fallback: T): T {
-  try {
-    return s ? (JSON.parse(s) as T) : fallback;
-  } catch {
-    return fallback;
-  }
+  try { return s ? (JSON.parse(s) as T) : fallback; } catch { return fallback; }
 }
 
 async function saveJSON(key: string, value: any) {
@@ -47,9 +50,7 @@ async function saveJSON(key: string, value: any) {
   try {
     await storage.init();
     if (storage.isLoggedIn()) await storage.setData(key, json);
-  } catch {
-    /* best effort */
-  }
+  } catch { /* best effort */ }
 }
 
 function loadJSON<T>(key: string, fallback: T): T {
@@ -57,7 +58,9 @@ function loadJSON<T>(key: string, fallback: T): T {
   return parseJSON<T>(local, fallback);
 }
 
-// ---------- Quests (legacy semantikk) ----------
+// ============================================================================
+// Quests (legacy semantikk)
+// ============================================================================
 export function getQuestCompletion(): QuestCompletionMap {
   return loadJSON<QuestCompletionMap>(TASKS_KEY, {});
 }
@@ -67,10 +70,20 @@ export async function setQuestCompletion(map: QuestCompletionMap) {
   notify();
 }
 
-export function getQuestState() {
+export function getQuestState(): QuestStateForUI {
   const map = getQuestCompletion();
   const completedQuests = Object.keys(map).filter((k) => !!map[k]);
-  return { completedQuests, map };
+
+  // Hent objectives og playerLevel fra 'tarkov-progress' (storage.ts)
+  const progress = loadProgress(); // { completedObjectives?: string[]; playerLevel?: number; ... }
+  const completedObjectives = progress.completedObjectives ?? [];
+
+  return {
+    completedQuests,
+    map,
+    completedObjectives,
+    playerLevel: progress.playerLevel,
+  };
 }
 
 export async function completeQuest(id: string, prereqs: string[] = []) {
@@ -86,7 +99,9 @@ export async function uncompleteQuest(id: string) {
   await setQuestCompletion(map);
 }
 
-// ---------- Undo-stack for quests ----------
+// ============================================================================
+// Undo-stack for quests (snapshot-basert, legacy stil)
+// ============================================================================
 export function getQuestUndoCount(): number {
   const stack = loadJSON<QuestCompletionMap[]>(UNDO_KEY, []);
   return stack.length;
@@ -106,7 +121,6 @@ export async function popQuestUndoSnapshot(): Promise<QuestCompletionMap | null>
   return last;
 }
 
-// 🟪 Dette manglet hos deg – UndoButton importerer denne:
 export async function undoLastQuestChange(): Promise<boolean> {
   const prev = await popQuestUndoSnapshot();
   if (!prev) return false;
@@ -114,25 +128,53 @@ export async function undoLastQuestChange(): Promise<boolean> {
   return true;
 }
 
-// ---------- Objectives (for optimizer) ----------
-export function getObjectiveMap(): ObjectiveMap {
-  return loadJSON<ObjectiveMap>(OBJECTIVES_KEY, {});
-}
-
-export async function setObjectiveMap(map: ObjectiveMap) {
-  await saveJSON(OBJECTIVES_KEY, map);
-  // Om optimizer-siden lytter på subscribeToQuestState for redraw, trigge notify():
+// ============================================================================
+// Objectives (brukes av optimizer)
+// ============================================================================
+export async function toggleQuestObjective(objectiveId: string, done: boolean) {
+  const progress = loadProgress();
+  const set = new Set(progress.completedObjectives ?? []);
+  if (done) set.add(objectiveId); else set.delete(objectiveId);
+  progress.completedObjectives = Array.from(set);
+  saveProgress(progress); // local; hvis du vil, kan du også kalle storage.setData her
   notify();
 }
 
-// 🟪 Dette manglet – optimizer importerer denne:
-export async function toggleQuestObjective(objectiveId: string, done: boolean) {
-  const map = { ...getObjectiveMap() };
-  map[objectiveId] = done;
-  await setObjectiveMap(map);
+// ============================================================================
+// Hideout – minimal global «select all levels»-status for komponenten din
+// ============================================================================
+type HideoutLevelsMap = Record<number, boolean>; // level -> selected
+
+function getHideoutLevels(): HideoutLevelsMap {
+  return loadJSON<HideoutLevelsMap>(HIDEOUT_KEY, {});
 }
 
-// ---------- Migrering (tom – beholdt for kompatibilitet) ----------
+async function setHideoutLevels(map: HideoutLevelsMap) {
+  await saveJSON(HIDEOUT_KEY, map);
+  // HideoutTracker lytter kanskje ikke her, men notify() skader ikke.
+  notify();
+}
+
+/**
+ * Eksporten som manglet:
+ * Global toggling av "alle på gitt level" (brukes av components/HideoutTracker.tsx).
+ * Vi lagrer kun en global switch pr. level, som komponenten kan bruke som kilde.
+ */
+export async function setAllHideoutLevelsSelected(level: number, selected: boolean) {
+  const m = { ...getHideoutLevels() };
+  m[level] = selected;
+  await setHideoutLevels(m);
+}
+
+// (valgfritt) Lesestatus for komponenten
+export function isHideoutLevelSelected(level: number): boolean {
+  const m = getHideoutLevels();
+  return !!m[level];
+}
+
+// ============================================================================
+// Migrering (hold tom inntil du trenger å mappe gamle nøkler til nye)
+// ============================================================================
 export function migrateOldData() {
-  // Legg evt. konvertering av gamle nøkler → nye her.
+  // map gamle → nye her ved behov
 }
