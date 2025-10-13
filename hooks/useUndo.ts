@@ -1,63 +1,58 @@
-// lib/undo.ts
-export type UndoScope = "quest" | "questItems" | "hideout" | "optimizer";
+// hooks/useUndo.ts
+"use client";
 
-type Change<T> = {
-  prev: T;
-  next: T;
-  apply: (val: T) => void;      // setter verdien til next
-  revert: (val: T) => void;     // setter verdien til prev
-  stamp: number;                // Date.now()
-};
+import { useState, useEffect, useCallback } from 'react';
+import { undoManager, withUndo } from '@/lib/undo';
+import type { UndoScope } from '@/lib/undo';
 
-class Stack<T> {
-  private s: Change<T>[] = [];
-  push(c: Change<T>) { this.s.push(c); }
-  pop(): Change<T> | undefined { return this.s.pop(); }
-  get length() { return this.s.length; }
-}
+/**
+ * Hook som gir tilgang til undo-funksjonalitet for et gitt scope
+ */
+export function useUndo(scope: UndoScope) {
+  const [canUndo, setCanUndo] = useState(false);
 
-class UndoManager {
-  private stacks = new Map<UndoScope, Stack<any>>();
+  // Oppdater canUndo når komponenten mountes og når undo-stacken endres
+  useEffect(() => {
+    const updateCanUndo = () => {
+      setCanUndo(undoManager.canUndo(scope));
+    };
 
-  private getStack(scope: UndoScope) {
-    if (!this.stacks.has(scope)) this.stacks.set(scope, new Stack());
-    return this.stacks.get(scope)!;
-  }
+    // Initial check
+    updateCanUndo();
 
-  push<T>(scope: UndoScope, change: Change<T>) {
-    this.getStack(scope).push(change);
-  }
+    // Subscribe til endringer i undo-stacken
+    const unsubscribe = undoManager.subscribe(scope, updateCanUndo);
 
-  canUndo(scope: UndoScope) {
-    return this.getStack(scope).length > 0;
-  }
+    return () => unsubscribe();
+  }, [scope]);
 
-  undo(scope: UndoScope) {
-    const c = this.getStack(scope).pop();
-    if (!c) return false;
-    // Reverter siste endring
-    c.revert(c.prev);
-    return true;
-  }
-}
+  const undo = useCallback(() => {
+    const success = undoManager.undo(scope);
+    setCanUndo(undoManager.canUndo(scope));
+    return success;
+  }, [scope]);
 
-export const undoManager = new UndoManager();
+  /**
+   * Wrapper-funksjon som registrerer en endring og utfører den
+   * @param getCurrent - Funksjon som returnerer nåværende state
+   * @param setter - Funksjon som setter ny state
+   * @param computeNext - Funksjon som beregner neste state basert på nåværende
+   */
+  const wrapChange = useCallback(
+    <T,>(
+      getCurrent: () => T,
+      setter: (v: T) => void,
+      computeNext: (curr: T) => T
+    ) => {
+      withUndo(scope, getCurrent, setter, computeNext);
+      setCanUndo(undoManager.canUndo(scope));
+    },
+    [scope]
+  );
 
-// Hjelper for å registrere en endring rundt en mutasjon:
-export function withUndo<T>(
-  scope: UndoScope,
-  getCurrent: () => T,
-  setter: (v: T) => void,
-  computeNext: (curr: T) => T
-) {
-  const prev = getCurrent();
-  const next = computeNext(prev);
-  undoManager.push(scope, {
-    prev,
-    next,
-    apply: () => setter(next),
-    revert: () => setter(prev),
-    stamp: Date.now(),
-  });
-  setter(next);
+  return {
+    canUndo,
+    undo,
+    wrapChange,
+  };
 }
