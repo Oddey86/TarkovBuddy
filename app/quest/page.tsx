@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -362,10 +363,12 @@ export default function QuestTrackerPage() {
             const completedCount = filteredQuests.filter((q) => completed.has(q.id)).length;
             const totalCount = filteredQuests.length;
 
-            // Hent trader-bilde
-            const traderImageUrl = TRADER_IMAGES[traderName] || TRADER_IMAGES['Unknown'];
+            // Hent trader-bilde - prioriter hardkodede bilder
+            const traderImageUrl = TRADER_IMAGES[traderName];
             const traderInitials = traderName.split(/\s+/).map(s => s[0]).join('').substring(0, 2).toUpperCase();
             const showImage = traderImageUrl && !imageErrors.has(traderName);
+            
+            console.log(`Trader: ${traderName}, Image URL: ${traderImageUrl}, Show: ${showImage}`);
 
             const handleImageError = () => {
               setImageErrors(prev => new Set(prev).add(traderName));
