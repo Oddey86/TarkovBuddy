@@ -367,8 +367,6 @@ export default function QuestTrackerPage() {
             const traderImageUrl = TRADER_IMAGES[traderName];
             const traderInitials = traderName.split(/\s+/).map(s => s[0]).join('').substring(0, 2).toUpperCase();
             const showImage = traderImageUrl && !imageErrors.has(traderName);
-            
-            console.log(`Trader: ${traderName}, Image URL: ${traderImageUrl}, Show: ${showImage}`);
 
             const handleImageError = () => {
               setImageErrors(prev => new Set(prev).add(traderName));
@@ -381,14 +379,24 @@ export default function QuestTrackerPage() {
               >
                 <div className="p-4 border-b border-[#24283b] flex-shrink-0">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#24283b] flex-shrink-0 bg-[#2f3240] flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#24283b] flex-shrink-0 bg-[#2f3240] flex items-center justify-center relative">
                       {showImage ? (
-                        <img
-                          src={traderImageUrl}
-                          alt={traderName}
-                          className="w-full h-full object-cover"
-                          onError={handleImageError}
-                        />
+                        <>
+                          <Image
+                            src={traderImageUrl}
+                            alt={traderName}
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                            onError={() => handleImageError()}
+                            onLoadingComplete={(result) => {
+                              if (result.naturalWidth === 0) {
+                                handleImageError();
+                              }
+                            }}
+                          />
+                        </>
                       ) : (
                         <span className="font-bold text-[#cbd2ff] text-sm">{traderInitials}</span>
                       )}
