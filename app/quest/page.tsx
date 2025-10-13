@@ -347,24 +347,23 @@ export default function QuestTrackerPage() {
               >
                 <div className="p-4 border-b border-[#24283b] flex-shrink-0">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#24283b] flex-shrink-0 bg-[#0e0f13] flex items-center justify-center">
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#24283b] flex-shrink-0 bg-[#0e0f13] flex items-center justify-center relative">
                       {traderImageUrl ? (
-                        <img
+                        <Image
                           src={traderImageUrl}
                           alt={traderName}
-                          className="w-full h-full object-cover"
+                          fill
+                          className="object-cover"
+                          unoptimized
                           onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            const parent = e.currentTarget.parentElement;
-                            if (parent) {
-                              parent.textContent = traderInitials;
-                              parent.classList.add('font-bold', 'text-[#cbd2ff]');
-                            }
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.style.display = 'none';
                           }}
                         />
-                      ) : (
-                        <span className="font-bold text-[#cbd2ff]">{traderInitials}</span>
-                      )}
+                      ) : null}
+                      <span className="font-bold text-[#cbd2ff] absolute inset-0 flex items-center justify-center pointer-events-none">
+                        {traderInitials}
+                      </span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <h2 className="text-lg font-bold text-[#e8eaf6] truncate">{traderName}</h2>
