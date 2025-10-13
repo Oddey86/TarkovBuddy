@@ -1,48 +1,63 @@
-// hooks/useUndo.ts
-"use client";
-import { useSyncExternalStore, useCallback, useState, useEffect } from "react";
-import { undoManager, UndoScope } from "@/lib/undo";
+// lib/undo.ts
+export type UndoScope = "quest" | "questItems" | "hideout" | "optimizer";
 
-// Enkel pub/sub for "kan jeg angre?" – lokalt i komponent.
-const subs = new Set<() => void>();
-function subscribe(cb: () => void) { subs.add(cb); return () => subs.delete(cb); }
-function emit() { subs.forEach(fn => fn()); }
+type Change<T> = {
+  prev: T;
+  next: T;
+  apply: (val: T) => void;      // setter verdien til next
+  revert: (val: T) => void;     // setter verdien til prev
+  stamp: number;                // Date.now()
+};
 
-export function useUndo(scope: UndoScope) {
-  // Re-render når noen pusher/undoer i samme scope:
-  const canUndo = useSyncExternalStore(
-    subscribe,
-    () => undoManager.canUndo(scope),
-    () => false
-  );
+class Stack<T> {
+  private s: Change<T>[] = [];
+  push(c: Change<T>) { this.s.push(c); }
+  pop(): Change<T> | undefined { return this.s.pop(); }
+  get length() { return this.s.length; }
+}
 
-  const undo = useCallback(() => {
-    const ok = undoManager.undo(scope);
-    if (ok) emit();
-    return ok;
-  }, [scope]);
+class UndoManager {
+  private stacks = new Map<UndoScope, Stack<any>>();
 
-  // Tastatursnarvei Ctrl+Z
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        undo();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [undo]);
+  private getStack(scope: UndoScope) {
+    if (!this.stacks.has(scope)) this.stacks.set(scope, new Stack());
+    return this.stacks.get(scope)!;
+  }
 
-  // Hjelper for å wrappe en state-endring og poste til Undo-stack:
-  const wrapChange = useCallback(<T,>(
-    getCurrent: () => T,
-    setter: (v: T) => void,
-    computeNext: (curr: T) => T
-  ) => {
-    const { withUndo } = require("@/lib/undo");
-    withUndo(scope, getCurrent, (v: T) => { setter(v); emit(); }, computeNext);
-  }, [scope]);
+  push<T>(scope: UndoScope, change: Change<T>) {
+    this.getStack(scope).push(change);
+  }
 
-  return { canUndo, undo, wrapChange };
+  canUndo(scope: UndoScope) {
+    return this.getStack(scope).length > 0;
+  }
+
+  undo(scope: UndoScope) {
+    const c = this.getStack(scope).pop();
+    if (!c) return false;
+    // Reverter siste endring
+    c.revert(c.prev);
+    return true;
+  }
+}
+
+export const undoManager = new UndoManager();
+
+// Hjelper for å registrere en endring rundt en mutasjon:
+export function withUndo<T>(
+  scope: UndoScope,
+  getCurrent: () => T,
+  setter: (v: T) => void,
+  computeNext: (curr: T) => T
+) {
+  const prev = getCurrent();
+  const next = computeNext(prev);
+  undoManager.push(scope, {
+    prev,
+    next,
+    apply: () => setter(next),
+    revert: () => setter(prev),
+    stamp: Date.now(),
+  });
+  setter(next);
 }
