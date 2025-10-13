@@ -17,7 +17,7 @@ import {
   type SweepStep,
   getMapEmoji
 } from '@/lib/tarkovOptimizer';
-import { getQuestState, subscribeToQuestState, toggleQuestObjective, migrateOldData } from '@/lib/questState';
+import { getQuestState, subscribeToQuestState, toggleQuestObjective, migrateOldData, loadProgress } from '@/lib/questState';
 import { ChevronDown, ChevronRight, ExternalLink, Edit2 } from 'lucide-react';
 
 const ALL_MAPS = ['Factory', 'Customs', 'Woods', 'Shoreline', 'Interchange', 'Reserve', 'Labs', 'Lighthouse', 'Streets', 'Ground Zero'];
@@ -124,7 +124,15 @@ export default function OptimizerPage() {
   };
 
   const handleToggleObjective = (taskId: string, objectiveId: string) => {
-    toggleQuestObjective(taskId, objectiveId);
+    // Bygg den unike nøkkelen som brukes i completedObjectives
+    const objKey = `${taskId}:${objectiveId}`;
+    
+    // Sjekk om objectivet allerede er fullført
+    const progress = loadProgress();
+    const isCurrentlyDone = progress.completedObjectives?.includes(objKey) ?? false;
+    
+    // Toggle ved å sende den motsatte verdien
+    toggleQuestObjective(objKey, !isCurrentlyDone);
   };
 
   if (loading) {
