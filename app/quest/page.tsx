@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { fetchAllQuests } from '@/lib/tarkovApi';
-import { getQuestState, completeQuest, uncompleteQuest, subscribeToQuestState, migrateOldData } from '@/lib/questState';
+import {
+  getQuestState,
+  completeQuest,
+  uncompleteQuest,
+  subscribeToQuestState,
+  migrateOldData,
+} from '@/lib/questState';
 import { Search, ExternalLink } from 'lucide-react';
-import { UndoButton } from "@/components/UndoButton";
+import { UndoButton } from '@/components/UndoButton';
+import { useUndo } from '@/hooks/useUndo';
 
 interface Quest {
   id: string;
@@ -23,37 +30,29 @@ interface Quest {
 }
 
 const TRADER_IMAGES: Record<string, string> = {
-  'Prapor': 'https://assets.tarkov.dev/prapor-icon.jpg',
-  'Therapist': 'https://assets.tarkov.dev/therapist-icon.jpg',
-  'Fence': 'https://assets.tarkov.dev/fence-icon.jpg',
-  'Skier': 'https://assets.tarkov.dev/skier-icon.jpg',
-  'Peacekeeper': 'https://assets.tarkov.dev/peacekeeper-icon.jpg',
-  'Mechanic': 'https://assets.tarkov.dev/mechanic-icon.jpg',
-  'Ragman': 'https://assets.tarkov.dev/ragman-icon.jpg',
-  'Jaeger': 'https://assets.tarkov.dev/jaeger-icon.jpg',
-  'Lightkeeper': 'https://assets.tarkov.dev/lightkeeper-icon.jpg',
-  'Unknown': ''
+  Prapor: 'https://assets.tarkov.dev/prapor-icon.jpg',
+  Therapist: 'https://assets.tarkov.dev/therapist-icon.jpg',
+  Fence: 'https://assets.tarkov.dev/fence-icon.jpg',
+  Skier: 'https://assets.tarkov.dev/skier-icon.jpg',
+  Peacekeeper: 'https://assets.tarkov.dev/peacekeeper-icon.jpg',
+  Mechanic: 'https://assets.tarkov.dev/mechanic-icon.jpg',
+  Ragman: 'https://assets.tarkov.dev/ragman-icon.jpg',
+  Jaeger: 'https://assets.tarkov.dev/jaeger-icon.jpg',
+  Lightkeeper: 'https://assets.tarkov.dev/lightkeeper-icon.jpg',
+  Unknown: '',
 };
-export default function QuestPage() {
-  return (
-    <div className="flex items-center justify-between px-4 py-2 bg-[#0e0f13]">
-      <div className="flex items-center space-x-2">
-        <span className="text-sm text-muted-foreground">knivet_</span>
-        <button className="bg-black text-white text-xs px-2 py-1 rounded-md">Logg ut</button>
-      </div>
 
-      <div className="flex items-center space-x-2">
-        {/* Ny undo-knapp */}
-        <UndoButton scope="quest" />
-        <button className="bg-[#1f2233] text-white text-sm px-3 py-1 rounded-md">
-          ← Back to Quest Path
-        </button>
-      </div>
-    </div>
-  );
-}
-
-const TRADER_ORDER = ['Prapor', 'Therapist', 'Skier', 'Peacekeeper', 'Mechanic', 'Ragman', 'Jaeger', 'Fence', 'Lightkeeper'];
+const TRADER_ORDER = [
+  'Prapor',
+  'Therapist',
+  'Skier',
+  'Peacekeeper',
+  'Mechanic',
+  'Ragman',
+  'Jaeger',
+  'Fence',
+  'Lightkeeper',
+];
 
 export default function QuestTrackerPage() {
   const router = useRouter();
@@ -65,6 +64,9 @@ export default function QuestTrackerPage() {
   const [showKappa, setShowKappa] = useState(true);
   const [showBTR, setShowBTR] = useState(false);
   const [showLightkeeper, setShowLightkeeper] = useState(false);
+
+  // Undo-hook for quest-scope
+  const { wrapChange } = useUndo('quest');
 
   useEffect(() => {
     migrateOldData();
@@ -91,22 +93,57 @@ export default function QuestTrackerPage() {
     return () => unsubscribe();
   }, []);
 
-  const getPrerequisites = (questId: string): string[] => {
-    const quest = quests.find(q => q.id === questId);
-    if (!quest || !quest.taskRequirements) return [];
+  const getPrerequisites = useCallback(
+    (questId: string): string[] => {
+      const quest = quests.find((q) => q.id === questId);
+      if (!quest || !quest.taskRequirements) return [];
+      return quest.taskRequirements.filter((req) => req.task?.id).map((req) => req.task!.id);
+    },
+    [quests]
+  );
 
-    return quest.taskRequirements
-      .filter(req => req.task?.id)
-      .map(req => req.task!.id);
-  };
+  /**
+   * Setter full "completed set" ved å diff'e mot dagens completed.
+   * Dette lar oss revertere forrige endring presist.
+   */
+  const applyCompletedSet = useCallback(
+    (target: Set<string>) => {
+      const curr = new Set(completed);
+
+      // Fjern de som ikke lenger skal være complete
+      for (const id of curr) {
+        if (!target.has(id)) {
+          uncompleteQuest(id);
+        }
+      }
+      // Legg til de som mangler
+      for (const id of target) {
+        if (!curr.has(id)) {
+          completeQuest(id, getPrerequisites(id));
+        }
+      }
+    },
+    [completed, getPrerequisites]
+  );
 
   const toggleQuest = (questId: string) => {
-    if (completed.has(questId)) {
-      uncompleteQuest(questId);
-    } else {
-      const prerequisites = getPrerequisites(questId);
-      completeQuest(questId, prerequisites);
-    }
+    // Ta snapshot av gjeldende completed-set
+    wrapChange(
+      () => completed,
+      (nextSet: Set<string>) => applyCompletedSet(nextSet),
+      (curr: Set<string>) => {
+        // Forventet "next": hvis vi fullfører, legg til quest + dens prereqs;
+        // hvis vi uncompleter, fjern kun questId (lar eventuelle andre bli stående).
+        const next = new Set(curr);
+        if (curr.has(questId)) {
+          next.delete(questId);
+        } else {
+          next.add(questId);
+          for (const pre of getPrerequisites(questId)) next.add(pre);
+        }
+        return next;
+      }
+    );
   };
 
   const updateTraderSearch = (trader: string, term: string) => {
@@ -130,14 +167,14 @@ export default function QuestTrackerPage() {
     return acc;
   }, {} as Record<string, Quest[]>);
 
-  const traderNames = TRADER_ORDER.filter(name => questsByTrader[name]);
+  const traderNames = TRADER_ORDER.filter((name) => questsByTrader[name]);
 
   const getFilteredQuestCounts = () => {
     let totalFiltered = 0;
     let totalCompleted = 0;
 
-    Object.values(questsByTrader).forEach(traderQuests => {
-      traderQuests.forEach(quest => {
+    Object.values(questsByTrader).forEach((traderQuests) => {
+      traderQuests.forEach((quest) => {
         const isKappaQuest = quest.kappaRequired;
         const isLightkeeperQuest = quest.trader?.name === 'Lightkeeper';
 
@@ -173,6 +210,7 @@ export default function QuestTrackerPage() {
 
   return (
     <div className="min-h-screen bg-[#0e0f13] text-[#e8eaf6]">
+      {/* TOPP: med Undo + Back to Home */}
       <header className="sticky top-0 z-10 bg-[#0e0f13]/95 backdrop-blur-md border-b border-[#24283b]">
         <div className="px-4 py-3">
           <div className="flex items-center gap-4 flex-wrap mb-3">
@@ -216,6 +254,9 @@ export default function QuestTrackerPage() {
 
             <div className="flex-1" />
 
+            {/* UNDO-KNAPPEN I TOPPRADEN */}
+            <UndoButton scope="quest" />
+
             <Button
               onClick={() => router.push('/')}
               variant="outline"
@@ -230,11 +271,11 @@ export default function QuestTrackerPage() {
 
       <main className="pb-4">
         <div className="flex gap-4 px-4 py-4 overflow-x-auto">
-          {traderNames.map(traderName => {
+          {traderNames.map((traderName) => {
             const traderQuests = questsByTrader[traderName];
             const searchTerm = traderSearchTerms[traderName] || '';
 
-            const filteredQuests = traderQuests.filter(quest => {
+            const filteredQuests = traderQuests.filter((quest) => {
               if (hideCompleted && completed.has(quest.id)) return false;
               if (searchTerm && !quest.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
 
@@ -253,11 +294,14 @@ export default function QuestTrackerPage() {
               return shouldShow;
             });
 
-            const completedCount = filteredQuests.filter(q => completed.has(q.id)).length;
+            const completedCount = filteredQuests.filter((q) => completed.has(q.id)).length;
             const totalCount = filteredQuests.length;
 
             return (
-              <Card key={traderName} className="bg-[#1a1d2e] border-[#24283b] flex flex-col flex-shrink-0 w-[320px] h-[calc(100vh-100px)]">
+              <Card
+                key={traderName}
+                className="bg-[#1a1d2e] border-[#24283b] flex flex-col flex-shrink-0 w-[320px] h-[calc(100vh-100px)]"
+              >
                 <div className="p-4 border-b border-[#24283b] flex-shrink-0">
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#24283b] flex-shrink-0 bg-[#0e0f13]">
@@ -290,7 +334,7 @@ export default function QuestTrackerPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
-                  {filteredQuests.map(quest => (
+                  {filteredQuests.map((quest) => (
                     <div
                       key={quest.id}
                       className={`p-2.5 rounded border transition-all cursor-pointer group ${
@@ -311,7 +355,11 @@ export default function QuestTrackerPage() {
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <span className={`text-sm font-medium ${completed.has(quest.id) ? 'line-through text-[#8a8fa5]' : 'text-[#e8eaf6]'}`}>
+                            <span
+                              className={`text-sm font-medium ${
+                                completed.has(quest.id) ? 'line-through text-[#8a8fa5]' : 'text-[#e8eaf6]'
+                              }`}
+                            >
                               {quest.name}
                             </span>
                             {quest.kappaRequired && (
