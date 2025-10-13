@@ -1,40 +1,44 @@
 // components/UndoButton.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useUndo } from "@/hooks/useUndo";
-import { undoManager } from "@/lib/undo";
-import type { UndoScope } from "@/lib/undo";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  getQuestUndoCount,
+  undoLastQuestChange,
+  subscribeToQuestState,
+} from "@/lib/questState";
 
-export function UndoButton({ scope }: { scope: UndoScope }) {
-  const { canUndo, undo } = useUndo(scope);
-  const [undoCount, setUndoCount] = useState(0);
+export function UndoButton({ scope }: { scope: "quest" }) {
+  const [count, setCount] = useState(0);
 
   useEffect(() => {
-    const updateCount = () => {
-      setUndoCount(undoManager.getUndoCount(scope));
+    const update = () => setCount(getQuestUndoCount());
+    update();
+    // Re-render når quest-state endrer seg (etter toggles/undo)
+    const unsub = subscribeToQuestState(() => update());
+    // Få med deg lagring gjort i andre faner:
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === null || e.key === "tt_kappa_undo_v3" || e.key === "tt_kappa_tasks_v3") update();
     };
-
-    // Initial count
-    updateCount();
-
-    // Subscribe til endringer
-    const unsubscribe = undoManager.subscribe(scope, updateCount);
-
-    return () => unsubscribe();
-  }, [scope]);
+    window.addEventListener("storage", onStorage);
+    return () => { unsub(); window.removeEventListener("storage", onStorage); };
+  }, []);
 
   return (
     <Button
-      variant="default"
-      onClick={() => undo()}
-      disabled={!canUndo}
-      className="bg-[#6b73ff] hover:bg-[#5865ff] text-white px-4 py-2 text-sm rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+      onClick={async () => {
+        const ok = await undoLastQuestChange();
+        if (!ok) return;
+        setCount(getQuestUndoCount());
+      }}
+      disabled={count === 0}
+      className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-1 text-sm rounded-md"
+      title="Undo (reverter siste endring)"
     >
       <RotateCcw className="mr-2 h-4 w-4" />
-      {undoCount > 0 ? `Undo (${undoCount})` : "Undo"}
+      Undo
     </Button>
   );
 }
