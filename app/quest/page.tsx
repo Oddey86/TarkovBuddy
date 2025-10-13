@@ -18,6 +18,16 @@ import {
 import { Search, ExternalLink } from 'lucide-react';
 import { UndoButton } from '@/components/UndoButton';
 import { useUndo } from '@/hooks/useUndo';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Quest {
   id: string;
@@ -64,6 +74,7 @@ export default function QuestTrackerPage() {
   const [showKappa, setShowKappa] = useState(true);
   const [showBTR, setShowBTR] = useState(false);
   const [showLightkeeper, setShowLightkeeper] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
 
   // Undo-hook for quest-scope
   const { wrapChange } = useUndo('quest');
@@ -184,6 +195,16 @@ export default function QuestTrackerPage() {
     setTraderSearchTerms({ ...traderSearchTerms, [trader]: term });
   };
 
+  const handleResetProgress = useCallback(() => {
+    // Ta snapshot før reset
+    wrapChange(
+      () => completed,
+      (nextSet: Set<string>) => applyCompletedSet(nextSet),
+      () => new Set<string>() // Tom set = alle quests uncompleted
+    );
+    setShowResetDialog(false);
+  }, [completed, wrapChange, applyCompletedSet]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0e0f13] text-[#e8eaf6] flex items-center justify-center">
@@ -284,6 +305,15 @@ export default function QuestTrackerPage() {
               className="border-[#24283b] hover:bg-[#2a2e45]"
             >
               {hideCompleted ? 'Show Completed' : 'Hide Completed'}
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => setShowResetDialog(true)}
+              size="sm"
+              className="border-[#ef4444] text-[#ef4444] hover:bg-[#3b2225] hover:text-[#ef4444]"
+            >
+              Reset Progress
             </Button>
 
             <div className="flex-1" />
@@ -442,6 +472,31 @@ export default function QuestTrackerPage() {
           </div>
         </div>
       </div>
+
+      {/* Reset Progress Confirmation Dialog */}
+      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <AlertDialogContent className="bg-[#1a1d2e] border-[#24283b]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[#e8eaf6]">
+              Are you sure you want to reset all progress?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[#8a8fa5]">
+              This will uncheck all completed quests. This action can be undone using the Undo button.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-[#0e0f13] border-[#24283b] text-[#e8eaf6] hover:bg-[#2a2e45]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleResetProgress}
+              className="bg-[#ef4444] hover:bg-[#dc2626] text-white"
+            >
+              Reset Progress
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
