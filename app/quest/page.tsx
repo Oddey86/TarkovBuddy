@@ -122,11 +122,14 @@ export default function QuestTrackerPage() {
           completeQuest(id, getPrerequisites(id));
         }
       }
+      
+      // Oppdater local state
+      setCompleted(target);
     },
     [completed, getPrerequisites]
   );
 
-  const toggleQuest = (questId: string) => {
+  const toggleQuest = useCallback((questId: string) => {
     // Ta snapshot av gjeldende completed-set
     wrapChange(
       () => completed,
@@ -144,7 +147,7 @@ export default function QuestTrackerPage() {
         return next;
       }
     );
-  };
+  }, [completed, wrapChange, applyCompletedSet, getPrerequisites]);
 
   const updateTraderSearch = (trader: string, term: string) => {
     setTraderSearchTerms({ ...traderSearchTerms, [trader]: term });
