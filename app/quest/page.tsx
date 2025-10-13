@@ -194,6 +194,22 @@ export default function QuestTrackerPage() {
     }
   };
 
+  const handleResetProgress = async () => {
+    const confirmed = window.confirm(
+      'Are you sure you want to reset ALL quest progress? This will remove all completed quests. This action cannot be undone (but you can use Undo once after).'
+    );
+    
+    if (!confirmed) return;
+
+    await pushQuestUndoSnapshot();
+    const currentState = getQuestState();
+    
+    // Fjern alle completed quests
+    for (const questId of currentState.completedQuests) {
+      await uncompleteQuest(questId);
+    }
+  };
+
   const updateTraderSearch = (trader: string, term: string) => {
     setTraderSearchTerms({ ...traderSearchTerms, [trader]: term });
   };
@@ -300,18 +316,10 @@ export default function QuestTrackerPage() {
             <UndoButton scope="quest" />
 
             <Button
-              onClick={async () => {
-                if (confirm('Are you sure you want to reset all quest progress? This cannot be undone.')) {
-                  await pushQuestUndoSnapshot();
-                  const currentState = getQuestState();
-                  for (const questId of currentState.completedQuests) {
-                    await uncompleteQuest(questId);
-                  }
-                }
-              }}
+              onClick={handleResetProgress}
               variant="outline"
               size="sm"
-              className="border-red-900/50 hover:bg-red-900/20 text-red-400 hover:text-red-300"
+              className="border-red-900/50 bg-red-950/30 hover:bg-red-900/40 text-red-400 hover:text-red-300"
             >
               Reset Progress
             </Button>
