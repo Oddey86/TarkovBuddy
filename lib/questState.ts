@@ -1,12 +1,13 @@
 // lib/questState.ts
 "use client";
 
-import { storage, loadProgress, saveProgress } from "@/lib/storage";
+import { storage, loadProgress as storageLoadProgress, saveProgress } from "@/lib/storage";
 
 // === Legacy-lik nøkkelbruk ===
 const TASKS_KEY       = "tt_kappa_tasks_v3";     // questId -> boolean
 const UNDO_KEY        = "tt_kappa_undo_v3";      // stack av QuestCompletionMap snapshots
 const HIDEOUT_KEY     = "tt_hideout_levels_v1";  // level -> selected (for "select all" per level)
+const HIDEOUT_ITEMS_KEY = "tt_hideout_items_v1"; // itemId -> count
 
 // Merk: objectives + playerLevel hentes fra loadProgress()/saveProgress()
 // lagret i key 'tarkov-progress' i storage.ts
@@ -14,6 +15,7 @@ const HIDEOUT_KEY     = "tt_hideout_levels_v1";  // level -> selected (for "sele
 // ---------- typer ----------
 export type QuestCompletionMap = Record<string, boolean>;
 export type ObjectiveMap = Record<string, boolean>;
+export type HideoutItemsMap = Record<string, number>; // itemId -> count
 
 type QuestStateForUI = {
   completedQuests: string[];
@@ -59,6 +61,11 @@ function loadJSON<T>(key: string, fallback: T): T {
 }
 
 // ============================================================================
+// Re-eksporter loadProgress fra storage.ts
+// ============================================================================
+export { loadProgress } from "@/lib/storage";
+
+// ============================================================================
 // Quests (legacy semantikk)
 // ============================================================================
 export function getQuestCompletion(): QuestCompletionMap {
@@ -75,7 +82,7 @@ export function getQuestState(): QuestStateForUI {
   const completedQuests = Object.keys(map).filter((k) => !!map[k]);
 
   // Hent objectives og playerLevel fra 'tarkov-progress' (storage.ts)
-  const progress = loadProgress(); // { completedObjectives?: string[]; playerLevel?: number; ... }
+  const progress = storageLoadProgress(); // { completedObjectives?: string[]; playerLevel?: number; ... }
   const completedObjectives = progress.completedObjectives ?? [];
 
   return {
@@ -132,7 +139,7 @@ export async function undoLastQuestChange(): Promise<boolean> {
 // Objectives (brukes av optimizer)
 // ============================================================================
 export async function toggleQuestObjective(objectiveId: string, done: boolean) {
-  const progress = loadProgress();
+  const progress = storageLoadProgress();
   const set = new Set(progress.completedObjectives ?? []);
   if (done) set.add(objectiveId); else set.delete(objectiveId);
   progress.completedObjectives = Array.from(set);
@@ -176,6 +183,46 @@ export async function setAllHideoutLevelsSelected(level: number, selected: boole
 export function isHideoutLevelSelected(level: number): boolean {
   const m = getHideoutLevels();
   return !!m[level];
+}
+
+// ============================================================================
+// Hideout Items - tracking av items som trengs for hideout
+// ============================================================================
+function getHideoutItems(): HideoutItemsMap {
+  return loadJSON<HideoutItemsMap>(HIDEOUT_ITEMS_KEY, {});
+}
+
+async function setHideoutItems(map: HideoutItemsMap) {
+  await saveJSON(HIDEOUT_ITEMS_KEY, map);
+  notify();
+}
+
+/**
+ * Oppdater antall av et hideout item
+ */
+export async function updateHideoutItemCount(itemId: string, count: number) {
+  const items = { ...getHideoutItems() };
+  if (count <= 0) {
+    delete items[itemId];
+  } else {
+    items[itemId] = count;
+  }
+  await setHideoutItems(items);
+}
+
+/**
+ * Hent antall av et hideout item
+ */
+export function getHideoutItemCount(itemId: string): number {
+  const items = getHideoutItems();
+  return items[itemId] || 0;
+}
+
+/**
+ * Hent alle hideout items
+ */
+export function getAllHideoutItems(): HideoutItemsMap {
+  return getHideoutItems();
 }
 
 // ============================================================================
