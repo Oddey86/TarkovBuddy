@@ -14,20 +14,10 @@ import {
   uncompleteQuest,
   subscribeToQuestState,
   migrateOldData,
+  pushQuestUndoSnapshot,
 } from '@/lib/questState';
 import { Search, ExternalLink } from 'lucide-react';
 import { UndoButton } from '@/components/UndoButton';
-import { useUndo } from '@/hooks/useUndo';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 
 interface Quest {
   id: string;
@@ -74,10 +64,6 @@ export default function QuestTrackerPage() {
   const [showKappa, setShowKappa] = useState(true);
   const [showBTR, setShowBTR] = useState(false);
   const [showLightkeeper, setShowLightkeeper] = useState(false);
-  const [showResetDialog, setShowResetDialog] = useState(false);
-
-  // Undo-hook for quest-scope
-  const { wrapChange } = useUndo('quest');
 
   useEffect(() => {
     migrateOldData();
@@ -113,97 +99,21 @@ export default function QuestTrackerPage() {
     [quests]
   );
 
-  /**
-   * Setter full "completed set" ved å diff'e mot dagens completed.
-   * Dette lar oss revertere forrige endring presist.
-   */
-  const applyCompletedSet = useCallback(
-    (target: Set<string>) => {
-      console.log('[applyCompletedSet] Applying:', Array.from(target));
-      
-      // Hent gjeldende state fra questState (ikke fra React state)
-      const currentState = getQuestState();
-      const curr = new Set(currentState.completedQuests);
-      
-      console.log('[applyCompletedSet] Current state:', Array.from(curr));
+  const toggleQuest = async (questId: string) => {
+    // snapshot FØR endring – så undo går tilbake hit
+    await pushQuestUndoSnapshot();
 
-      // Fjern de som ikke lenger skal være complete
-      for (const id of curr) {
-        if (!target.has(id)) {
-          console.log('[applyCompletedSet] Uncompleting:', id);
-          uncompleteQuest(id);
-        }
-      }
-      // Legg til de som mangler
-      for (const id of target) {
-        if (!curr.has(id)) {
-          console.log('[applyCompletedSet] Completing:', id);
-          completeQuest(id, getPrerequisites(id));
-        }
-      }
-      
-      // Oppdater local state - VIKTIG!
-      setCompleted(new Set(target));
-    },
-    [getPrerequisites]
-  );
-
-  const toggleQuest = useCallback((questId: string) => {
-    console.log('[toggleQuest] Toggling quest:', questId);
-    console.log('[toggleQuest] Current completed:', Array.from(completed));
-    
-    // Ta snapshot av gjeldende completed-set
-    wrapChange(
-      // getCurrent: returnerer nåværende state
-      () => {
-        const current = new Set(completed);
-        console.log('[toggleQuest/getCurrent]:', Array.from(current));
-        return current;
-      },
-      // setter: funksjon som setter ny state
-      (nextSet: Set<string>) => {
-        console.log('[toggleQuest/setter] Setting to:', Array.from(nextSet));
-        applyCompletedSet(nextSet);
-      },
-      // computeNext: beregner neste state
-      (curr: Set<string>) => {
-        const next = new Set(curr);
-        console.log('[toggleQuest/computeNext] Computing next from:', Array.from(curr));
-        
-        if (curr.has(questId)) {
-          // Uncomplete quest
-          console.log('[toggleQuest/computeNext] Removing quest');
-          next.delete(questId);
-        } else {
-          // Complete quest + prerequisites
-          console.log('[toggleQuest/computeNext] Adding quest and prereqs');
-          next.add(questId);
-          const prereqs = getPrerequisites(questId);
-          console.log('[toggleQuest/computeNext] Prerequisites:', prereqs);
-          for (const pre of prereqs) {
-            next.add(pre);
-          }
-        }
-        
-        console.log('[toggleQuest/computeNext] Result:', Array.from(next));
-        return next;
-      }
-    );
-  }, [completed, wrapChange, applyCompletedSet, getPrerequisites]);
+    if (completed.has(questId)) {
+      await uncompleteQuest(questId);
+    } else {
+      const prerequisites = getPrerequisites(questId);
+      await completeQuest(questId, prerequisites);
+    }
+  };
 
   const updateTraderSearch = (trader: string, term: string) => {
     setTraderSearchTerms({ ...traderSearchTerms, [trader]: term });
   };
-
-  const handleResetProgress = useCallback(() => {
-    // Ta snapshot før reset
-    wrapChange(
-      () => completed,
-      (nextSet: Set<string>) => applyCompletedSet(nextSet),
-      () => new Set<string>() // Tom set = alle quests uncompleted
-    );
-    setShowResetDialog(false);
-  }, [completed, wrapChange, applyCompletedSet]);
 
   if (loading) {
     return (
@@ -215,9 +125,7 @@ export default function QuestTrackerPage() {
 
   const questsByTrader = quests.reduce((acc, quest) => {
     const traderName = quest.trader?.name || 'Unknown';
-    if (!acc[traderName]) {
-      acc[traderName] = [];
-    }
+    if (!acc[traderName]) acc[traderName] = [];
     acc[traderName].push(quest);
     return acc;
   }, {} as Record<string, Quest[]>);
@@ -244,9 +152,7 @@ export default function QuestTrackerPage() {
 
         if (shouldShow) {
           totalFiltered++;
-          if (completed.has(quest.id)) {
-            totalCompleted++;
-          }
+          if (completed.has(quest.id)) totalCompleted++;
         }
       });
     });
@@ -265,7 +171,7 @@ export default function QuestTrackerPage() {
 
   return (
     <div className="min-h-screen bg-[#0e0f13] text-[#e8eaf6]">
-      {/* TOPP: med Undo + Back to Home */}
+      {/* TOPP: Undo + Back to Home */}
       <header className="sticky top-0 z-10 bg-[#0e0f13]/95 backdrop-blur-md border-b border-[#24283b]">
         <div className="px-4 py-3">
           <div className="flex items-center gap-4 flex-wrap mb-3">
@@ -307,18 +213,9 @@ export default function QuestTrackerPage() {
               {hideCompleted ? 'Show Completed' : 'Hide Completed'}
             </Button>
 
-            <Button
-              variant="outline"
-              onClick={() => setShowResetDialog(true)}
-              size="sm"
-              className="border-[#ef4444] text-[#ef4444] hover:bg-[#3b2225] hover:text-[#ef4444]"
-            >
-              Reset Progress
-            </Button>
-
             <div className="flex-1" />
 
-            {/* UNDO-KNAPPEN I TOPPRADEN */}
+            {/* UNDO-KNAPP (quest-undo stack) */}
             <UndoButton scope="quest" />
 
             <Button
@@ -346,9 +243,7 @@ export default function QuestTrackerPage() {
               const isKappaQuest = quest.kappaRequired;
               const isLightkeeperQuest = traderName === 'Lightkeeper';
 
-              if (!showKappa && !showBTR && !showLightkeeper) {
-                return true;
-              }
+              if (!showKappa && !showBTR && !showLightkeeper) return true;
 
               let shouldShow = false;
               if (showKappa && isKappaQuest) shouldShow = true;
@@ -373,9 +268,7 @@ export default function QuestTrackerPage() {
                         src={TRADER_IMAGES[traderName]}
                         alt={traderName}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -414,7 +307,7 @@ export default function QuestTrackerPage() {
                           className="mt-0.5"
                           onClick={(e) => {
                             e.stopPropagation();
-                            toggleQuest(quest.id);
+                            void toggleQuest(quest.id);
                           }}
                         />
                         <div className="flex-1 min-w-0">
@@ -472,31 +365,6 @@ export default function QuestTrackerPage() {
           </div>
         </div>
       </div>
-
-      {/* Reset Progress Confirmation Dialog */}
-      <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <AlertDialogContent className="bg-[#1a1d2e] border-[#24283b]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#e8eaf6]">
-              Are you sure you want to reset all progress?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-[#8a8fa5]">
-              This will uncheck all completed quests. This action can be undone using the Undo button.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-[#0e0f13] border-[#24283b] text-[#e8eaf6] hover:bg-[#2a2e45]">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleResetProgress}
-              className="bg-[#ef4444] hover:bg-[#dc2626] text-white"
-            >
-              Reset Progress
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
