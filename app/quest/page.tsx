@@ -108,42 +108,73 @@ export default function QuestTrackerPage() {
    */
   const applyCompletedSet = useCallback(
     (target: Set<string>) => {
-      const curr = new Set(completed);
+      console.log('[applyCompletedSet] Applying:', Array.from(target));
+      
+      // Hent gjeldende state fra questState (ikke fra React state)
+      const currentState = getQuestState();
+      const curr = new Set(currentState.completedQuests);
+      
+      console.log('[applyCompletedSet] Current state:', Array.from(curr));
 
       // Fjern de som ikke lenger skal være complete
       for (const id of curr) {
         if (!target.has(id)) {
+          console.log('[applyCompletedSet] Uncompleting:', id);
           uncompleteQuest(id);
         }
       }
       // Legg til de som mangler
       for (const id of target) {
         if (!curr.has(id)) {
+          console.log('[applyCompletedSet] Completing:', id);
           completeQuest(id, getPrerequisites(id));
         }
       }
       
-      // Oppdater local state
-      setCompleted(target);
+      // Oppdater local state - VIKTIG!
+      setCompleted(new Set(target));
     },
-    [completed, getPrerequisites]
+    [getPrerequisites]
   );
 
   const toggleQuest = useCallback((questId: string) => {
+    console.log('[toggleQuest] Toggling quest:', questId);
+    console.log('[toggleQuest] Current completed:', Array.from(completed));
+    
     // Ta snapshot av gjeldende completed-set
     wrapChange(
-      () => completed,
-      (nextSet: Set<string>) => applyCompletedSet(nextSet),
+      // getCurrent: returnerer nåværende state
+      () => {
+        const current = new Set(completed);
+        console.log('[toggleQuest/getCurrent]:', Array.from(current));
+        return current;
+      },
+      // setter: funksjon som setter ny state
+      (nextSet: Set<string>) => {
+        console.log('[toggleQuest/setter] Setting to:', Array.from(nextSet));
+        applyCompletedSet(nextSet);
+      },
+      // computeNext: beregner neste state
       (curr: Set<string>) => {
-        // Forventet "next": hvis vi fullfører, legg til quest + dens prereqs;
-        // hvis vi uncompleter, fjern kun questId (lar eventuelle andre bli stående).
         const next = new Set(curr);
+        console.log('[toggleQuest/computeNext] Computing next from:', Array.from(curr));
+        
         if (curr.has(questId)) {
+          // Uncomplete quest
+          console.log('[toggleQuest/computeNext] Removing quest');
           next.delete(questId);
         } else {
+          // Complete quest + prerequisites
+          console.log('[toggleQuest/computeNext] Adding quest and prereqs');
           next.add(questId);
-          for (const pre of getPrerequisites(questId)) next.add(pre);
+          const prereqs = getPrerequisites(questId);
+          console.log('[toggleQuest/computeNext] Prerequisites:', prereqs);
+          for (const pre of prereqs) {
+            next.add(pre);
+          }
         }
+        
+        console.log('[toggleQuest/computeNext] Result:', Array.from(next));
         return next;
       }
     );
