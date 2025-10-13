@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #121217;
+    --panel: #1b1c22;
+    --panel2: #171821;
+    --card: #242630;
+    --ring: #303344;
+    --txt: #EEE;
+    --muted: #a8afc7;
+    --primary: #6B73FF;
+    --good: #19c37d;
+    --warn: #f5a524;
+    --bad: #ef4444;
+
+    --background: 217 11% 7%;
+    --foreground: 0 0% 93%;
+    --card: 225 12% 15%;
+    --card-foreground: 0 0% 93%;
+    --popover: 225 12% 15%;
+    --popover-foreground: 0 0% 93%;
+    --primary: 239 100% 71%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 225 9% 18%;
+    --secondary-foreground: 0 0% 93%;
+    --muted: 221 11% 65%;
+    --muted-foreground: 221 11% 65%;
+    --accent: 225 9% 18%;
+    --accent-foreground: 0 0% 93%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 225 13% 20%;
+    --input: 225 13% 20%;
+    --ring: 225 13% 25%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+  html, body {
+    margin: 0;
+    padding: 0;
+    @apply bg-[#121217] text-[#EEE];
+    font-family: Inter, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}

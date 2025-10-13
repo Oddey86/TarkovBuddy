@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://www.tarkovbuddy.org/sitemap.xml
+
+# Prioriter viktige sider
+Allow: /quest.html
+Allow: /quest-items.html
+Allow: /hideout-items.html
+Allow: /quest-path.html

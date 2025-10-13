@@ -1,0 +1,94 @@
+{
+  "nav": {
+    "quest": "Oppdrag",
+    "questItems": "Oppdragsting",
+    "hideoutItems": "Hideout Items",
+    "questPath": "Oppdragsrute",
+    "obsOverlay": "OBS Overlegg",
+    "about": "Om & Endringer"
+  },
+  "home": {
+    "title": "TarkovBuddy - Oppdragssporing",
+    "hero": {
+      "title": "Komplett Escape from Tarkov Oppdragssporing",
+      "subtitle": "Spor din Kappa Container-progresjon, oppdragsting og hideout-oppgraderinger. Gratis verktøy med skysynkronisering og automatisk progresjonssporing.",
+      "startTracking": "Start Sporingsoppdrag",
+      "learnMore": "Om & Endringer"
+    },
+    "quest": {
+      "title": "Oppdragssporing",
+      "desc": "Spor Kappa-nødvendige oppdrag per trader. Automatisk avhengighetshåndtering og direkte Wiki-lenker for hvert oppdrag. Progresjon lagret med angre-støtte.",
+      "btn": "Gå til Oppdragssporing"
+    },
+    "questItems": {
+      "title": "Oppdragstingsporing",
+      "btn": "Gå til Oppdragsting"
+    },
+    "hideout": {
+      "title": "Hideout-sporing",
+      "btn": "Gå til Hideout-sporing"
+    },
+    "questPath": {
+      "title": "Oppdragsrutevisning",
+      "btn": "Vis Oppdragsrute"
+    },
+    "stats": {
+      "completed": "Fullført:",
+      "tracked": "Poster fulgt opp:",
+      "noProgress": "Ingen lagret progresjon ennå"
+    }
+  },
+  "about": {
+    "backBtn": "← Tilbake til forsiden",
+    "tagline": "Din personlige assistent for sporing av Escape from Tarkov oppdragslinjer, items og hideout-progresjon",
+    "title": "Om TarkovBuddy",
+    "description": "TarkovBuddy er en gratis webapplikasjon designet for å hjelpe Escape from Tarkov-spillere med å holde oversikt over oppdragsprogresjon, nødvendige items og hideout-oppgraderinger.",
+    "feature1": {
+      "title": "Oppdragssporing",
+      "desc": "Spor Kappa, Lightkeeper og BTR oppdragslinjer med automatisk avhengighetshåndtering"
+    },
+    "feature2": {
+      "title": "Item-sjekkliste",
+      "desc": "Hold oversikt over alle items du trenger for oppdrag og hideout"
+    },
+    "feature3": {
+      "title": "Skysynkronisering",
+      "desc": "Logg inn for å synkronisere progresjon på tvers av enheter"
+    },
+    "feature4": {
+      "title": "OBS-overlegg",
+      "desc": "Vis oppdragsprogresjon live i streams med OBS-nettleserkilde"
+    },
+    "techTitle": "Teknologi",
+    "changelogTitle": "Endringslogg",
+    "changelog": {
+      "type": {
+        "new": "Ny funksjon",
+        "fix": "Feilretting",
+        "launch": "Lansering"
+      },
+      "v2": {
+        "date": "Oktober 2025",
+        "version": "v2.0 - Skysynkroniseringsutgivelse",
+        "desc": ""
+      },
+      "v15": {
+        "date": "Oktober 2025",
+        "version": "v1.5 - Stabilitetsoppdatering",
+        "desc": ""
+      },
+      "v1": {
+        "date": "Oktober 2025",
+        "version": "v1.0 - Første utgivelse",
+        "desc": ""
+      }
+    },
+    "plannedTitle": "Planlagte funksjoner",
+    "planned": {
+      "3": "Eksport/import progresjon",
+      "4": "Mørk/lys modus veksling"
+    },
+    "contactTitle": "Kontakt & Støtte",
+    "contactDesc": "TarkovBuddy er et hobbyprosjekt laget av spillere for spillere. Har du forslag, funnet en feil, eller vil bidra?"
+  }
+}

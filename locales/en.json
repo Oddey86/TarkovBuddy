@@ -1,0 +1,94 @@
+{
+  "nav": {
+    "quest": "Quest",
+    "questItems": "Quest Items",
+    "hideoutItems": "Hideout Items",
+    "questPath": "Quest Path",
+    "obsOverlay": "OBS Overlay",
+    "about": "About & Changes"
+  },
+  "home": {
+    "title": "TarkovBuddy - Quest Tracker",
+    "hero": {
+      "title": "Complete Escape from Tarkov Quest Tracker",
+      "subtitle": "Track your Kappa Container progression, quest items, and hideout upgrades. Free tool with cloud sync and automatic progress tracking.",
+      "startTracking": "Start Tracking Quests",
+      "learnMore": "About & Changes"
+    },
+    "quest": {
+      "title": "Quest Tracker",
+      "desc": "Track Kappa-required quests per trader. Automatic dependency handling and direct Wiki links for every quest. Progress saved with undo support.",
+      "btn": "Go to Quest Tracker"
+    },
+    "questItems": {
+      "title": "Quest Items Tracker",
+      "btn": "Go to Quest Items"
+    },
+    "hideout": {
+      "title": "Hideout Tracker",
+      "btn": "Go to Hideout Tracker"
+    },
+    "questPath": {
+      "title": "Quest Path Visualizer",
+      "btn": "View Quest Path"
+    },
+    "stats": {
+      "completed": "Completed:",
+      "tracked": "Items tracked:",
+      "noProgress": "No saved progress yet"
+    }
+  },
+  "about": {
+    "backBtn": "← Back to home",
+    "tagline": "Your personal assistant for tracking Escape from Tarkov questlines, items and hideout progression",
+    "title": "About TarkovBuddy",
+    "description": "TarkovBuddy is a free web application designed to help Escape from Tarkov players keep track of quest progression, required items and hideout upgrades.",
+    "feature1": {
+      "title": "Quest Tracking",
+      "desc": "Track Kappa, Lightkeeper and BTR questlines with automatic dependency handling"
+    },
+    "feature2": {
+      "title": "Item Checklist",
+      "desc": "Keep track of all items you need for quests and hideout"
+    },
+    "feature3": {
+      "title": "Cloud Sync",
+      "desc": "Log in to synchronize progression across devices"
+    },
+    "feature4": {
+      "title": "OBS Overlay",
+      "desc": "Display quest progression live in streams with OBS browser source"
+    },
+    "techTitle": "Technology",
+    "changelogTitle": "Changelog",
+    "changelog": {
+      "type": {
+        "new": "New Feature",
+        "fix": "Bugfix",
+        "launch": "Launch"
+      },
+      "v2": {
+        "date": "October 2025",
+        "version": "v2.0 - Cloud Sync Release",
+        "desc": ""
+      },
+      "v15": {
+        "date": "October 2025",
+        "version": "v1.5 - Stability Update",
+        "desc": ""
+      },
+      "v1": {
+        "date": "October 2025",
+        "version": "v1.0 - Initial Release",
+        "desc": ""
+      }
+    },
+    "plannedTitle": "Planned Features",
+    "planned": {
+      "3": "Export/import progression",
+      "4": "Dark/light mode toggle"
+    },
+    "contactTitle": "Contact & Support",
+    "contactDesc": "TarkovBuddy is a hobby project made by players for players. Have suggestions, found a bug, or want to contribute?"
+  }
+}
