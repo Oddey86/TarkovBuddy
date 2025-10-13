@@ -156,7 +156,13 @@ async function setHideoutLevels(map: HideoutLevelsMap) {
 }
 
 /**
- * Eksporten som manglet:
+ * Alias for HideoutTracker-kompatibilitet
+ */
+export async function toggleHideoutLevelSelection(level: number, selected: boolean) {
+  await setAllHideoutLevelsSelected(level, selected);
+}
+
+/**
  * Global toggling av "alle på gitt level" (brukes av components/HideoutTracker.tsx).
  * Vi lagrer kun en global switch pr. level, som komponenten kan bruke som kilde.
  */
