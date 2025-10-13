@@ -23,10 +23,14 @@ function notify() {
   for (const cb of subscribers) cb(s);
 }
 
-export function subscribeToQuestState(cb: Subscriber) {
+export function subscribeToQuestState(cb: Subscriber): () => void {
   subscribers.push(cb);
-  return () => (subscribers = subscribers.filter((x) => x !== cb));
+  // Viktig: CLEANUP skal ikke returnere array, den skal bare gjøre sideeffekt og returnere void
+  return () => {
+    subscribers = subscribers.filter((x) => x !== cb);
+  };
 }
+
 
 // ---------- JSON helpers ----------
 function parseJSON<T>(s: string | null, fallback: T): T {
