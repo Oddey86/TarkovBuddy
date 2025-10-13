@@ -70,6 +70,7 @@ export default function QuestTrackerPage() {
   const [showKappa, setShowKappa] = useState(true);
   const [showBTR, setShowBTR] = useState(false);
   const [showLightkeeper, setShowLightkeeper] = useState(false);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   // Map for quest-grupper
   const [questGroupMap, setQuestGroupMap] = useState<Map<string, string[]>>(new Map());
@@ -339,6 +340,11 @@ export default function QuestTrackerPage() {
             // Hent trader-bilde
             const traderImageUrl = TRADER_IMAGES[traderName] || TRADER_IMAGES['Unknown'];
             const traderInitials = traderName.split(/\s+/).map(s => s[0]).join('').substring(0, 2).toUpperCase();
+            const showImage = traderImageUrl && !imageErrors.has(traderName);
+
+            const handleImageError = () => {
+              setImageErrors(prev => new Set(prev).add(traderName));
+            };
 
             return (
               <Card
@@ -347,23 +353,17 @@ export default function QuestTrackerPage() {
               >
                 <div className="p-4 border-b border-[#24283b] flex-shrink-0">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#24283b] flex-shrink-0 bg-[#0e0f13] flex items-center justify-center relative">
-                      {traderImageUrl ? (
-                        <Image
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#24283b] flex-shrink-0 bg-[#2f3240] flex items-center justify-center">
+                      {showImage ? (
+                        <img
                           src={traderImageUrl}
                           alt={traderName}
-                          fill
-                          className="object-cover"
-                          unoptimized
-                          onError={(e) => {
-                            const target = e.currentTarget as HTMLImageElement;
-                            target.style.display = 'none';
-                          }}
+                          className="w-full h-full object-cover"
+                          onError={handleImageError}
                         />
-                      ) : null}
-                      <span className="font-bold text-[#cbd2ff] absolute inset-0 flex items-center justify-center pointer-events-none">
-                        {traderInitials}
-                      </span>
+                      ) : (
+                        <span className="font-bold text-[#cbd2ff] text-sm">{traderInitials}</span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h2 className="text-lg font-bold text-[#e8eaf6] truncate">{traderName}</h2>
