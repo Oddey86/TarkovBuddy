@@ -107,8 +107,8 @@ export function withUndo<T>(
   const next = computeNext(prev);
   
   // Dyp kloning for Set og andre objekter
-  const clonePrev = prev instanceof Set ? new Set(prev) : structuredClone(prev);
-  const cloneNext = next instanceof Set ? new Set(next) : structuredClone(next);
+  const clonePrev = (prev instanceof Set ? new Set(prev) : structuredClone(prev)) as T;
+  const cloneNext = (next instanceof Set ? new Set(next) : structuredClone(next)) as T;
   
   undoManager.push(scope, {
     prev: clonePrev,
