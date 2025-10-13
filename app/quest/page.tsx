@@ -54,6 +54,12 @@ const TRADER_ORDER = [
   'Lightkeeper',
 ];
 
+// Quest-grupper som hører sammen (velg én, ferdigstill alle)
+const QUEST_GROUPS = [
+  ["Kind of Sabotage", "Supply Plans"],
+  ["Big Customer", "Chemical - Part 4", "Out of Curiosity"]
+];
+
 export default function QuestTrackerPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -65,6 +71,9 @@ export default function QuestTrackerPage() {
   const [showBTR, setShowBTR] = useState(false);
   const [showLightkeeper, setShowLightkeeper] = useState(false);
 
+  // Map for quest-grupper
+  const [questGroupMap, setQuestGroupMap] = useState<Map<string, string[]>>(new Map());
+
   useEffect(() => {
     migrateOldData();
 
@@ -75,6 +84,16 @@ export default function QuestTrackerPage() {
 
         const state = getQuestState();
         setCompleted(new Set(state.completedQuests));
+
+        // Bygg quest-gruppe map
+        const groupMap = new Map<string, string[]>();
+        for (const group of QUEST_GROUPS) {
+          const lowerGroup = group.map(q => q.toLowerCase());
+          for (const questName of lowerGroup) {
+            groupMap.set(questName, lowerGroup);
+          }
+        }
+        setQuestGroupMap(groupMap);
       } catch (error) {
         console.error('Failed to load quests:', error);
       } finally {
@@ -90,24 +109,87 @@ export default function QuestTrackerPage() {
     return () => unsubscribe();
   }, []);
 
-  const getPrerequisites = useCallback(
-    (questId: string): string[] => {
+  // Hent alle prerequisites (rekursivt)
+  const getAllDependencies = useCallback(
+    (questId: string, visited: Set<string> = new Set()): Set<string> => {
+      if (visited.has(questId)) return new Set();
+      visited.add(questId);
+
       const quest = quests.find((q) => q.id === questId);
-      if (!quest || !quest.taskRequirements) return [];
-      return quest.taskRequirements.filter((req) => req.task?.id).map((req) => req.task!.id);
+      if (!quest || !quest.taskRequirements) return new Set();
+
+      const allDeps = new Set<string>();
+      const directDeps = quest.taskRequirements
+        .filter((req) => req.task?.id)
+        .map((req) => req.task!.id);
+
+      for (const depId of directDeps) {
+        allDeps.add(depId);
+        const nested = getAllDependencies(depId, visited);
+        nested.forEach((n) => allDeps.add(n));
+      }
+
+      return allDeps;
     },
     [quests]
   );
 
+  // Finn quest-gruppe for et quest
+  const getQuestGroup = useCallback(
+    (questName: string): string[] | null => {
+      return questGroupMap.get(questName.toLowerCase()) || null;
+    },
+    [questGroupMap]
+  );
+
+  // Finn alle quest-IDer i samme gruppe
+  const getGroupTaskIds = useCallback(
+    (questName: string): string[] => {
+      const group = getQuestGroup(questName);
+      if (!group) return [];
+
+      const ids: string[] = [];
+      for (const quest of quests) {
+        if (group.includes(quest.name.toLowerCase())) {
+          ids.push(quest.id);
+        }
+      }
+      return ids;
+    },
+    [quests, getQuestGroup]
+  );
+
   const toggleQuest = async (questId: string) => {
-    // snapshot FØR endring – så undo går tilbake hit
     await pushQuestUndoSnapshot();
 
+    const currentState = getQuestState();
+    const newCompleted = new Set(currentState.completedQuests);
+
     if (completed.has(questId)) {
+      // Fjern quest
+      newCompleted.delete(questId);
       await uncompleteQuest(questId);
     } else {
-      const prerequisites = getPrerequisites(questId);
-      await completeQuest(questId, prerequisites);
+      // Legg til quest
+      newCompleted.add(questId);
+
+      // Ferdigstill alle prerequisites
+      const allDeps = getAllDependencies(questId);
+      allDeps.forEach((depId) => newCompleted.add(depId));
+
+      // Ferdigstill alle quest i samme gruppe
+      const quest = quests.find((q) => q.id === questId);
+      if (quest) {
+        const groupIds = getGroupTaskIds(quest.name);
+        groupIds.forEach((gid) => newCompleted.add(gid));
+      }
+
+      // Lagre alle
+      for (const id of newCompleted) {
+        if (!currentState.completedQuests.includes(id)) {
+          await completeQuest(id, []);
+        }
+      }
     }
   };
 
@@ -171,7 +253,6 @@ export default function QuestTrackerPage() {
 
   return (
     <div className="min-h-screen bg-[#0e0f13] text-[#e8eaf6]">
-      {/* TOPP: Undo + Back to Home */}
       <header className="sticky top-0 z-10 bg-[#0e0f13]/95 backdrop-blur-md border-b border-[#24283b]">
         <div className="px-4 py-3">
           <div className="flex items-center gap-4 flex-wrap mb-3">
@@ -215,7 +296,6 @@ export default function QuestTrackerPage() {
 
             <div className="flex-1" />
 
-            {/* UNDO-KNAPP (quest-undo stack) */}
             <UndoButton scope="quest" />
 
             <Button
@@ -256,6 +336,10 @@ export default function QuestTrackerPage() {
             const completedCount = filteredQuests.filter((q) => completed.has(q.id)).length;
             const totalCount = filteredQuests.length;
 
+            // Hent trader-bilde
+            const traderImageUrl = TRADER_IMAGES[traderName] || TRADER_IMAGES['Unknown'];
+            const traderInitials = traderName.split(/\s+/).map(s => s[0]).join('').substring(0, 2).toUpperCase();
+
             return (
               <Card
                 key={traderName}
@@ -263,13 +347,24 @@ export default function QuestTrackerPage() {
               >
                 <div className="p-4 border-b border-[#24283b] flex-shrink-0">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#24283b] flex-shrink-0 bg-[#0e0f13]">
-                      <img
-                        src={TRADER_IMAGES[traderName]}
-                        alt={traderName}
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-[#24283b] flex-shrink-0 bg-[#0e0f13] flex items-center justify-center">
+                      {traderImageUrl ? (
+                        <img
+                          src={traderImageUrl}
+                          alt={traderName}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const parent = e.currentTarget.parentElement;
+                            if (parent) {
+                              parent.textContent = traderInitials;
+                              parent.classList.add('font-bold', 'text-[#cbd2ff]');
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span className="font-bold text-[#cbd2ff]">{traderInitials}</span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h2 className="text-lg font-bold text-[#e8eaf6] truncate">{traderName}</h2>
