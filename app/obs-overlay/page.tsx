@@ -1,150 +1,167 @@
-'use client';
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compact Kappa Progress Overlay</title>
+  <style>
+    :root {
+      --bg-card: rgba(26, 29, 46, 0.95);
+      --border: rgba(36, 40, 59, 0.8);
+      --text-primary: #e8eaf6;
+      --text-secondary: #8a8fa5;
+      --primary-start: #6b73ff;
+      --primary-end: #8a9aff;
+      --bg-progress: #0e0f13;
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: transparent;
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background-color: var(--bg-card);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 8px 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      min-width: 250px;
+      overflow: hidden;
+    }
+    .title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+    }
+    .stats-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .count {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .progress-bar-wrapper {
+      width: 128px;
+      height: 8px;
+      background-color: var(--bg-progress);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(to right, var(--primary-start), var(--primary-end));
+      width: 0%;
+      transition: width 0.5s ease-out;
+      border-radius: 999px;
+    }
+    .percentage {
+      font-size: 12px;
+      color: var(--text-secondary);
+      width: 40px;
+      text-align: right;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+    .container.updated {
+      animation: pulse 0.4s ease;
+    }
+  </style>
+</head>
+<body>
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Copy, ExternalLink, Check } from 'lucide-react';
-
-export default function OBSOverlayPage() {
-  const router = useRouter();
-  const [copied, setCopied] = useState(false);
-
-  const overlayUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/obs-overlay.html`
-    : '';
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(overlayUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="min-h-screen bg-[#0e0f13]">
-      <header className="sticky top-0 z-20 bg-[#0e0f13]/95 backdrop-blur-md border-b border-[#24283b]">
-        <div className="max-w-5xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold tracking-wide">OBS Overlay Setup</h1>
-            <div className="flex-1" />
-            <Button
-              onClick={() => router.push('/quest')}
-              variant="outline"
-              className="border-[#24283b] hover:bg-[#2a2e45] text-sm"
-            >
-              Back to Quest Tracker
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-5xl mx-auto p-6 space-y-6">
-        <Card className="bg-[#1a1d2e] border-[#24283b] p-6">
-          <h2 className="text-xl font-bold mb-4">Copy Overlay URL</h2>
-          <p className="text-sm text-[#8a8fa5] mb-4">
-            Copy this URL and paste it into OBS as a Browser Source
-          </p>
-
-          <div className="flex gap-2 mb-6">
-            <Input
-              value={overlayUrl}
-              readOnly
-              className="bg-[#0e0f13] border-[#24283b] text-[#e8eaf6] font-mono text-sm"
-            />
-            <Button
-              onClick={copyToClipboard}
-              className="bg-[#6b73ff] hover:bg-[#5a63ee] gap-2 flex-shrink-0"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  Copy URL
-                </>
-              )}
-            </Button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-semibold text-lg mb-2">How to add to OBS:</h3>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-[#a8afc7] ml-2">
-                <li>Open OBS Studio</li>
-                <li>Click the + button in the Sources panel</li>
-                <li>Select &quot;Browser&quot; from the list</li>
-                <li>Name it &quot;Tarkov Progress&quot; (or whatever you like)</li>
-                <li>Paste the URL above into the &quot;URL&quot; field</li>
-                <li>Set Width: 500 and Height: 300 (or adjust to your preference)</li>
-                <li>Check &quot;Shutdown source when not visible&quot; for better performance</li>
-                <li>Click OK</li>
-              </ol>
-            </div>
-
-            <div className="bg-[#0e0f13] border border-[#24283b] rounded-lg p-4">
-              <h3 className="font-semibold text-sm mb-2 text-[#6b73ff]">Optional: Compact Mode</h3>
-              <p className="text-xs text-[#8a8fa5] mb-2">
-                For a smaller overlay, add <code className="bg-[#1a1d2e] px-1 py-0.5 rounded">?compact=true</code> to the end of the URL:
-              </p>
-              <code className="text-xs bg-[#1a1d2e] px-2 py-1 rounded block overflow-x-auto text-[#a8afc7]">
-                {overlayUrl}?compact=true
-              </code>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="bg-[#1a1d2e] border-[#24283b] p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold">Live Preview</h2>
-            <Button
-              onClick={() => window.open('/obs-overlay.html', '_blank')}
-              variant="outline"
-              className="border-[#24283b] hover:bg-[#2a2e45] text-sm gap-2"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Open in New Tab
-            </Button>
-          </div>
-
-          <p className="text-sm text-[#8a8fa5] mb-4">
-            This is how your overlay will look in OBS (transparent background in OBS)
-          </p>
-
-          <div className="bg-[#0e0f13] rounded-lg p-4 border border-[#24283b]">
-            <iframe
-              src="/obs-overlay.html"
-              className="w-full h-[300px] rounded border-0"
-              title="OBS Overlay Preview"
-            />
-          </div>
-        </Card>
-
-        <Card className="bg-[#1a1d2e] border-[#24283b] p-6">
-          <h2 className="text-xl font-bold mb-4">Tips & Tricks</h2>
-          <ul className="space-y-2 text-sm text-[#a8afc7]">
-            <li className="flex items-start gap-2">
-              <span className="text-[#6b73ff] font-bold">•</span>
-              <span>The overlay updates automatically every 2 seconds as you complete quests</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-[#6b73ff] font-bold">•</span>
-              <span>Position and resize the overlay anywhere on your stream</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-[#6b73ff] font-bold">•</span>
-              <span>The background is transparent in OBS, only the stats box will show</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-[#6b73ff] font-bold">•</span>
-              <span>Make sure you complete quests in the Quest Tracker for the overlay to update</span>
-            </li>
-          </ul>
-        </Card>
-      </main>
+  <div class="container" id="container">
+    <div class="title">Kappa Progress</div>
+    <div class="stats-row">
+      <div class="count"><span id="completedValue">...</span>/<span id="totalValue">...</span></div>
+      <div class="progress-bar-wrapper">
+        <div class="progress-bar-fill" id="progressBarFill"></div>
+      </div>
+      <div class="percentage" id="progressValue">...%</div>
     </div>
-  );
-}
+  </div>
+
+  <script>
+    const FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCiajU6SCyYOwuSpgX-xHtV4IDpftFve3g",
+      authDomain: "tarkov-tracker-a1c31.firebaseapp.com",
+      databaseURL: "https://tarkov-tracker-a1c31-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "tarkov-tracker-a1c31"
+    };
+
+    const params = new URLSearchParams(window.location.search);
+    const USER_ID = params.get('user');
+
+    if (!USER_ID) {
+      document.body.innerHTML = '<div style="padding:20px;color:#ff6b6b;font-family:monospace;">ERROR: User ID missing</div>';
+    }
+
+    const REFRESH_INTERVAL = 2000;
+    let lastProgressValue = null;
+
+    function addPulseAnimation(element) {
+      element.classList.add('updated');
+      setTimeout(() => element.classList.remove('updated'), 400);
+    }
+
+    function updateStats(stats) {
+      if (!stats) {
+        document.getElementById('completedValue').textContent = '0';
+        document.getElementById('totalValue').textContent = '0';
+        document.getElementById('progressValue').textContent = '0.0%';
+        document.getElementById('progressBarFill').style.width = '0%';
+        return;
+      }
+
+      const totalTasks = stats.total || 0;
+      const completedTasks = stats.completed || 0;
+      const progress = parseFloat(stats.progress) || 0;
+      
+      document.getElementById('completedValue').textContent = completedTasks;
+      document.getElementById('totalValue').textContent = totalTasks;
+      document.getElementById('progressValue').textContent = progress.toFixed(1) + '%';
+      document.getElementById('progressBarFill').style.width = progress + '%';
+      
+      if (lastProgressValue !== null && lastProgressValue !== progress) {
+        addPulseAnimation(document.getElementById('container'));
+      }
+      
+      lastProgressValue = progress;
+    }
+
+    async function fetchStats() {
+      try {
+        const url = `${FIREBASE_CONFIG.databaseURL}/users/${USER_ID}/stats.json?timestamp=${Date.now()}`;
+        const response = await fetch(url, { cache: 'no-store' });
+        
+        if (response.ok) {
+          const stats = await response.json();
+          updateStats(stats);
+        }
+      } catch(e) {
+        console.error('Error fetching from Firebase:', e);
+      }
+    }
+
+    updateStats(null);
+    fetchStats();
+    setInterval(fetchStats, REFRESH_INTERVAL);
+  </script>
+</body>
+</html>
