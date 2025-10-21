@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buldre - Twitch Streamer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0f0a 50%, #0a0a0a 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: rgba(20, 10, 5, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            border-bottom: 2px solid #ff4400;
+            box-shadow: 0 4px 20px rgba(255, 68, 0, 0.3);
+        }
+
+        .nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff4400;
+            text-shadow: 0 0 20px rgba(255, 68, 0, 0.8);
+            letter-spacing: 2px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: #ffffff;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            color: #ff4400;
+            text-shadow: 0 0 10px rgba(255, 68, 0, 0.5);
+        }
+
+        .hero {
+            margin-top: 80px;
+            padding: 4rem 2rem;
+            text-align: center;
+            background: radial-gradient(circle at center, rgba(255, 68, 0, 0.1) 0%, transparent 70%);
+        }
+
+        .hero-content {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(45deg, #ff4400, #ff8800);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        @keyframes glow {
+            0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 68, 0, 0.5)); }
+            50% { filter: drop-shadow(0 0 20px rgba(255, 68, 0, 0.8)); }
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            color: #cccccc;
+            margin-bottom: 2rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1.5rem;
+            background: linear-gradient(135deg, #ff0000, #ff4400);
+            border-radius: 25px;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 20px rgba(255, 68, 0, 0.6);
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 3rem;
+            background: linear-gradient(135deg, #ff4400, #ff8800);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 20px rgba(255, 68, 0, 0.4);
+            margin: 0.5rem;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 30px rgba(255, 68, 0, 0.6);
+        }
+
+        .section {
+            padding: 4rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            color: #ff4400;
+            text-shadow: 0 0 10px rgba(255, 68, 0, 0.5);
+        }
+
+        .stream-schedule {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+        }
+
+        .schedule-card {
+            background: rgba(30, 15, 10, 0.6);
+            border: 2px solid #ff4400;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .schedule-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(255, 68, 0, 0.4);
+            background: rgba(40, 20, 15, 0.8);
+        }
+
+        .schedule-card h3 {
+            color: #ff8800;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .schedule-card p {
+            color: #cccccc;
+            line-height: 1.6;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(255, 68, 0, 0.1), rgba(255, 136, 0, 0.1));
+            border: 2px solid #ff4400;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #ff4400;
+            display: block;
+        }
+
+        .stat-label {
+            color: #cccccc;
+            margin-top: 0.5rem;
+        }
+
+        .footer {
+            background: rgba(20, 10, 5, 0.8);
+            padding: 2rem;
+            text-align: center;
+            border-top: 2px solid #ff4400;
+            margin-top: 4rem;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .social-links a {
+            color: #ff4400;
+            text-decoration: none;
+            font-size: 1.5rem;
+            transition: all 0.3s;
+        }
+
+        .social-links a:hover {
+            color: #ff8800;
+            transform: scale(1.2);
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .nav-links {
+                gap: 1rem;
+                flex-wrap: wrap;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="logo">🔥 BULDRE</div>
+            <ul class="nav-links">
+                <li><a href="#hjem">Hjem</a></li>
+                <li><a href="#schedule">Strømmeplan</a></li>
+                <li><a href="#stats">Statistikk</a></li>
+                <li><a href="#kontakt">Kontakt</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <section class="hero" id="hjem">
+        <div class="hero-content">
+            <h1>BULDRE</h1>
+            <div class="status-badge">🔴 LIVE NÅ</div>
+            <p>Norges mest eksplosive gaming-streamer! 🎮</p>
+            <p>Følg med på episke gaming-øyeblikk, råe strategier og en hel haug med action!</p>
+            <a href="https://twitch.tv" class="cta-button" target="_blank">Se Stream</a>
+            <a href="#schedule" class="cta-button">Strømmeplan</a>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="stats">
+            <div class="stat-card">
+                <span class="stat-number">15K+</span>
+                <p class="stat-label">Følgere</p>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">500+</span>
+                <p class="stat-label">Timer Strømmet</p>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">2K+</span>
+                <p class="stat-label">Gjennomsnitt Seere</p>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number">98%</span>
+                <p class="stat-label">Positivitet</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="schedule">
+        <h2 class="section-title">Strømmeplan</h2>
+        <div class="stream-schedule">
+            <div class="schedule-card">
+                <h3>Mandag - Onsdag</h3>
+                <p>⏰ 18:00 - 23:00</p>
+                <p>🎮 Competitive Gaming</p>
+                <p>Ranket matches og intens action!</p>
+            </div>
+            <div class="schedule-card">
+                <h3>Torsdag - Fredag</h3>
+                <p>⏰ 19:00 - 01:00</p>
+                <p>🎯 Variety Stream</p>
+                <p>Nye spill og community-spillkvelder</p>
+            </div>
+            <div class="schedule-card">
+                <h3>Lørdag - Søndag</h3>
+                <p>⏰ 14:00 - 22:00</p>
+                <p>🔥 Marathon Streams</p>
+                <p>Episke helgestrømmer med giveaways!</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="kontakt">
+        <h2 class="section-title">Bli med i Community!</h2>
+        <div style="text-align: center; max-width: 600px; margin: 0 auto;">
+            <p style="font-size: 1.2rem; color: #cccccc; margin-bottom: 2rem;">
+                Slå deg sammen med tusenvis av andre fans og bli en del av Buldre-familien!
+            </p>
+            <a href="https://discord.gg" class="cta-button" target="_blank">Discord Server</a>
+            <a href="https://twitter.com" class="cta-button" target="_blank">Twitter</a>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="social-links">
+            <a href="https://twitch.tv" target="_blank">📺 Twitch</a>
+            <a href="https://youtube.com" target="_blank">🎥 YouTube</a>
+            <a href="https://discord.gg" target="_blank">💬 Discord</a>
+            <a href="https://twitter.com" target="_blank">🐦 Twitter</a>
+        </div>
+        <p style="color: #888;">© 2025 Buldre Stream. All rights reserved.</p>
+    </footer>
+</body>
+</html>
